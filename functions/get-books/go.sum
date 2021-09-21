@@ -37,6 +37,8 @@ github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210921200834-9246f54b
 github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210921200834-9246f54b28a4/go.mod h1:B32no3BByEJG/BjvF3/jV9LtZTHE0y0G635sm87WzJk=
 github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210921202729-f22bb5cc022e h1:NflY/ORfPrQDRbqPQwdBDiSxyjLUAhMOI7pTHx/SPbE=
 github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210921202729-f22bb5cc022e/go.mod h1:unsP6FceGUzqzUeR/hkK+vC4Al3niO5RPa+6lUi9TnM=
+github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210921203602-7d4e100aae49 h1:sgpkkPgLFO6RRd9DNeQrLzzu6m799/bIRxh4vqANcjY=
+github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210921203602-7d4e100aae49/go.mod h1:xLSMpmhJhWUl7ToVFu+H84u7Q206v4sMac+HrJ3IZI8=
 github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
 github.com/cpuguy83/go-md2man/v2 v2.0.0/go.mod h1:maD7wRr/U5Z6m/iR4s+kqSMx2CaBsrgA7czyZG/E6dU=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

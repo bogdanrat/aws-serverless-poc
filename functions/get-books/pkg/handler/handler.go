@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/bogdanrat/aws-serverless-poc/contracts/common"
-	"github.com/bogdanrat/aws-serverless-poc/functions/get-books/pkg/store"
 	"github.com/bogdanrat/aws-serverless-poc/lib/logger"
+	"github.com/bogdanrat/aws-serverless-poc/lib/store"
 	"net/http"
 )
 

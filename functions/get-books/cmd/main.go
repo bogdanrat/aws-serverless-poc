@@ -5,8 +5,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/bogdanrat/aws-serverless-poc/functions/get-books/pkg/handler"
-	"github.com/bogdanrat/aws-serverless-poc/functions/get-books/pkg/store/dynamostore"
 	"github.com/bogdanrat/aws-serverless-poc/lib/logger/cwlogger"
+	"github.com/bogdanrat/aws-serverless-poc/lib/store/dynamostore"
 	"os"
 )
 
