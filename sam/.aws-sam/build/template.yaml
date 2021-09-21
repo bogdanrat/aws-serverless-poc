@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Serverless Books API
+Parameters:
+  StageName:
+    Type: String
+    Default: dev
+    Description: The API Gateway deployment stage
+    AllowedPattern: ^[A-Za-z]+$
+    MaxLength: 10
+    MinLength: 2
+    ConstraintDescription: 2-10 Latin letters
+  LambdaAlias:
+    Type: String
+    Default: dev
+    Description: The Lambda Alias to publish
+    AllowedPattern: ^[A-Za-z]+$
+    MaxLength: 10
+    MinLength: 2
+    ConstraintDescription: 2-10 Latin letters
+  TableName:
+    Type: String
+    Default: Books
+    Description: The DynamoDB Table Name
+    AllowedPattern: ^[A-Za-z]+$
+    MaxLength: 20
+    MinLength: 3
+    ConstraintDescription: 2-10 Latin letters
+  BucketName:
+    Type: String
+    Default: aws-serverless-poc
+    Description: The S3 Bucket for deployments
+Resources:
+  GetAllBooksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: GetAllBooks
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias:
+        Ref: LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role:
+        Fn::GetAtt:
+        - GetAllBooksFunctionRole
+        - Arn
+      CodeUri: ../../../functions/get-books/deployment.zip
+      Environment:
+        Variables:
+          REGION:
+            Ref: AWS::Region
+          TABLE_NAME:
+            Ref: BooksTable
+      Events:
+        GetBooksEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+            RestApiId:
+              Ref: BooksAPI
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  GetAllBooksFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - sts:AssumeRole
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyName: CreateCloudWatchLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: CreateCloudWatchMetricsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+      - PolicyName: GetDynamoDBTableItemsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:Scan
+            Resource:
+            - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
+            - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}/index/ID
+  BooksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName:
+        Ref: TableName
+      AttributeDefinitions:
+      - AttributeName: Author
+        AttributeType: S
+      - AttributeName: Title
+        AttributeType: S
+      - AttributeName: Category
+        AttributeType: S
+      KeySchema:
+      - AttributeName: Author
+        KeyType: HASH
+      - AttributeName: Title
+        KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+      GlobalSecondaryIndexes:
+      - IndexName: CategoryIndex
+        KeySchema:
+        - AttributeName: Category
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+  BooksAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: BooksAPI
+      StageName:
+        Ref: StageName
+      Variables:
+        lambdaAlias:
+          Ref: LambdaAlias
+      Cors:
+        AllowMethods: '''*'''
+        AllowOrigin: '''*'''
+      MethodSettings:
+      - ResourcePath: /*
+        HttpMethod: '*'
+        ThrottlingBurstLimit: 2
+        ThrottlingRateLimit: 1
+      DefinitionBody:
+        swagger: 2.0
+        info:
+          title:
+            Fn::Sub: BooksAPI-${StageName}
+        paths:
+          /:
+            get:
+              produces:
+              - application/json
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub:
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations
+                  - lambdaArn:
+                      Fn::GetAtt:
+                      - GetAllBooksFunction
+                      - Arn
+                    lambdaAlias:
+                      Ref: LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
+  LambdaApiGatewayInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: GetAllBooksFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*
+Outputs:
+  Api:
+    Description: API Gateway endpoint URL
+    Value:
+      Fn::Sub: https://${BooksAPI}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+  Table:
+    Description: DynamoDB Table
+    Value:
+      Ref: BooksTable
