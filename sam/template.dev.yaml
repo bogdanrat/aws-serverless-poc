@@ -32,6 +32,7 @@ Parameters:
     Default: aws-serverless-poc
     Description: The S3 Bucket for deployments
 Resources:
+  # Get all books Lambda Function
   GetAllBooksFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -58,12 +59,14 @@ Resources:
       ReservedConcurrentExecutions: 10
       Timeout: 600
       MemorySize: 128
+  # Get all books Lambda Function Role
   GetAllBooksFunctionRole:
     Type: "AWS::IAM::Role"
     Properties:
       Path: "/"
       ManagedPolicyArns:
         - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      # Allow Lambda ato assume this role
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -75,6 +78,7 @@ Resources:
                 - "lambda.amazonaws.com"
       Policies:
         - PolicyName: "CreateCloudWatchLogsPolicy"
+          # Allow Lambda to write to CloudWatch Logs & Metrics
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -93,6 +97,7 @@ Resources:
                   - cloudwatch:PutMetricData
                 Resource: "*"
         - PolicyName: "GetDynamoDBTableItemsPolicy"
+          # Allow Lambda to Scan the DynamoDB Table
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -166,7 +171,7 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
 
-  # API Gateway Role
+  # API Gateway Role to invoke Lambda
   LambdaApiGatewayInvokePermission:
     Type: "AWS::Lambda::Permission"
     Properties:
