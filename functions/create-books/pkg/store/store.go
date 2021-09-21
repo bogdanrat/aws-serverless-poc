@@ -1,6 +1,6 @@
 package store
 
-import "github.com/bogdanrat/aws-serverless-poc/functions/create-books/pkg/models"
+import "github.com/bogdanrat/aws-serverless-poc/contracts/models"
 
 const (
 	TitleTableAttributeName    = "Title"

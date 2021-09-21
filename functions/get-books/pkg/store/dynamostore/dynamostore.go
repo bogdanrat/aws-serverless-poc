@@ -6,8 +6,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/bogdanrat/aws-serverless-poc/functions/get-books/pkg/common"
-	"github.com/bogdanrat/aws-serverless-poc/functions/get-books/pkg/models"
+	"github.com/bogdanrat/aws-serverless-poc/contracts/common"
+	"github.com/bogdanrat/aws-serverless-poc/contracts/models"
 	"github.com/bogdanrat/aws-serverless-poc/functions/get-books/pkg/store"
 	"os"
 )
