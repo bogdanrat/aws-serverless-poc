@@ -11,17 +11,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://fehhqfv622.execute-api.eu-central-1.amazonaws.com/dev",
-					"protocol": "https",
+					"raw": "{{aws-serverless-poc-api-url}}",
 					"host": [
-						"fehhqfv622",
-						"execute-api",
-						"eu-central-1",
-						"amazonaws",
-						"com"
-					],
-					"path": [
-						"dev"
+						"{{aws-serverless-poc-api-url}}"
 					]
 				}
 			},
@@ -33,17 +25,11 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "https://fehhqfv622.execute-api.eu-central-1.amazonaws.com/dev/search?author=Bogdan&category=drama",
-					"protocol": "https",
+					"raw": "{{aws-serverless-poc-api-url}}/search?author=Bogdan&category=drama",
 					"host": [
-						"fehhqfv622",
-						"execute-api",
-						"eu-central-1",
-						"amazonaws",
-						"com"
+						"{{aws-serverless-poc-api-url}}"
 					],
 					"path": [
-						"dev",
 						"search"
 					],
 					"query": [
@@ -80,17 +66,9 @@
 					}
 				},
 				"url": {
-					"raw": "https://fehhqfv622.execute-api.eu-central-1.amazonaws.com/dev",
-					"protocol": "https",
+					"raw": "{{aws-serverless-poc-api-url}}",
 					"host": [
-						"fehhqfv622",
-						"execute-api",
-						"eu-central-1",
-						"amazonaws",
-						"com"
-					],
-					"path": [
-						"dev"
+						"{{aws-serverless-poc-api-url}}"
 					]
 				}
 			},
