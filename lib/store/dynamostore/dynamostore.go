@@ -15,6 +15,17 @@ import (
 	"strings"
 )
 
+const (
+	authorExpressionAttributeName    = "#author"
+	authorExpressionAttributeValue   = ":author"
+	titleExpressionAttributeName     = "#title"
+	titleExpressionAttributeValue    = ":title"
+	categoryExpressionAttributeName  = "#category"
+	categoryExpressionAttributeValue = ":category"
+	formatsExpressionAttributeName   = "#formats"
+	formatsExpressionAttributeValue  = ":formats"
+)
+
 type DynamoStore struct {
 	Client            *dynamodb.Client
 	TableName         string
@@ -124,42 +135,42 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 		// query by category, filter by title
 		if category != "" {
 			queryInput.IndexName = aws.String(s.CategoryIndexName)
-			keyConditionExpression = fmt.Sprintf("%s = :category", store.CategoryTableAttributeName)
+			keyConditionExpression = fmt.Sprintf("%s = %s", store.CategoryTableAttributeName, categoryExpressionAttributeValue)
 			queryInput.ExpressionAttributeValues = map[string]types.AttributeValue{
-				":category": &types.AttributeValueMemberS{Value: category},
+				categoryExpressionAttributeValue: &types.AttributeValueMemberS{Value: category},
 			}
 
 			if title != "" {
-				queryInput.FilterExpression = aws.String(fmt.Sprintf("#t = :title"))
+				queryInput.FilterExpression = aws.String(fmt.Sprintf("%s = %s", titleExpressionAttributeName, titleExpressionAttributeValue))
 				queryInput.ExpressionAttributeNames = map[string]string{
-					"#t": store.TitleTableAttributeName,
+					titleExpressionAttributeName: store.TitleTableAttributeName,
 				}
-				queryInput.ExpressionAttributeValues[":title"] = &types.AttributeValueMemberS{Value: title}
+				queryInput.ExpressionAttributeValues[titleExpressionAttributeValue] = &types.AttributeValueMemberS{Value: title}
 			}
 		} else if title != "" {
 			// query by title
 			queryInput.IndexName = aws.String(s.TitleIndexName)
-			keyConditionExpression = fmt.Sprintf("%s = :title", store.TitleTableAttributeName)
+			keyConditionExpression = fmt.Sprintf("%s = %s", store.TitleTableAttributeName, titleExpressionAttributeValue)
 			queryInput.ExpressionAttributeValues = map[string]types.AttributeValue{
-				":title": &types.AttributeValueMemberS{Value: title},
+				titleExpressionAttributeValue: &types.AttributeValueMemberS{Value: title},
 			}
 		}
 	} else {
 		// query by author (and by title) and filter by category
-		keyConditionExpression = fmt.Sprintf(`%s = :author`, store.AuthorTableAttributeName)
+		keyConditionExpression = fmt.Sprintf(`%s = %s`, store.AuthorTableAttributeName, authorExpressionAttributeValue)
 		queryInput.ExpressionAttributeValues = map[string]types.AttributeValue{
-			":author": &types.AttributeValueMemberS{Value: author},
+			authorExpressionAttributeValue: &types.AttributeValueMemberS{Value: author},
 		}
 
 		if title != "" {
-			keyConditionExpression = fmt.Sprintf("%s AND %s = :title", keyConditionExpression, store.TitleTableAttributeName)
-			queryInput.ExpressionAttributeValues[":title"] = &types.AttributeValueMemberS{Value: title}
+			keyConditionExpression = fmt.Sprintf("%s AND %s = %s", keyConditionExpression, store.TitleTableAttributeName, titleExpressionAttributeValue)
+			queryInput.ExpressionAttributeValues[titleExpressionAttributeValue] = &types.AttributeValueMemberS{Value: title}
 		} else if category != "" {
-			queryInput.FilterExpression = aws.String(fmt.Sprintf("#c = :category"))
+			queryInput.FilterExpression = aws.String(fmt.Sprintf("%s = %s", categoryExpressionAttributeName, categoryExpressionAttributeValue))
 			queryInput.ExpressionAttributeNames = map[string]string{
-				"#c": store.CategoryTableAttributeName,
+				categoryExpressionAttributeName: store.CategoryTableAttributeName,
 			}
-			queryInput.ExpressionAttributeValues[":category"] = &types.AttributeValueMemberS{Value: category}
+			queryInput.ExpressionAttributeValues[categoryExpressionAttributeValue] = &types.AttributeValueMemberS{Value: category}
 		}
 	}
 
@@ -169,4 +180,81 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 
 	queryInput.KeyConditionExpression = aws.String(keyConditionExpression)
 	return queryInput, nil
+}
+
+func (s *DynamoStore) Update(book *models.Book, partial bool) (*models.Book, error) {
+	updateInput := s.generateUpdateInput(book, partial)
+
+	output, err := s.Client.UpdateItem(context.Background(), updateInput)
+	if err != nil {
+		return nil, err
+	}
+
+	updatedBook := &models.Book{}
+	err = attributevalue.UnmarshalMap(output.Attributes, &updatedBook)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling dynamodb attributes map: %v", err)
+	}
+
+	return updatedBook, nil
+}
+
+func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) *dynamodb.UpdateItemInput {
+	formatsMap := make(map[string]types.AttributeValue)
+	for formatKey, formatValue := range book.Formats {
+		formatsMap[formatKey] = &types.AttributeValueMemberS{Value: formatValue}
+	}
+
+	updateInput := &dynamodb.UpdateItemInput{
+		TableName: aws.String(s.TableName),
+		Key: map[string]types.AttributeValue{
+			store.AuthorTableAttributeName: &types.AttributeValueMemberS{Value: book.Author},
+			store.TitleTableAttributeName:  &types.AttributeValueMemberS{Value: book.Title},
+		},
+		ReturnValues: types.ReturnValueAllNew,
+	}
+
+	var updateExpression string
+	// full update
+	if !partial {
+		updateInput.ExpressionAttributeNames = map[string]string{
+			categoryExpressionAttributeName: store.CategoryTableAttributeName,
+			formatsExpressionAttributeName:  store.FormatsTableAttributeName,
+		}
+
+		updateInput.ExpressionAttributeValues = map[string]types.AttributeValue{
+			categoryExpressionAttributeValue: &types.AttributeValueMemberS{Value: book.Category},
+			formatsExpressionAttributeValue:  &types.AttributeValueMemberM{Value: formatsMap},
+		}
+
+		updateExpression = fmt.Sprintf("SET %s = %s, %s = %s", categoryExpressionAttributeName, categoryExpressionAttributeValue, formatsExpressionAttributeName, formatsExpressionAttributeValue)
+	} else {
+		// partial update
+		if book.Category != "" {
+			updateInput.ExpressionAttributeNames = map[string]string{
+				categoryExpressionAttributeName: store.CategoryTableAttributeName,
+			}
+			updateInput.ExpressionAttributeValues = map[string]types.AttributeValue{
+				categoryExpressionAttributeValue: &types.AttributeValueMemberS{Value: book.Category},
+			}
+			updateExpression = fmt.Sprintf("SET %s = %s", categoryExpressionAttributeName, categoryExpressionAttributeValue)
+
+			if len(formatsMap) > 0 {
+				updateInput.ExpressionAttributeNames[formatsExpressionAttributeName] = store.FormatsTableAttributeName
+				updateInput.ExpressionAttributeValues[formatsExpressionAttributeValue] = &types.AttributeValueMemberM{Value: formatsMap}
+				updateExpression = fmt.Sprintf("SET %s = %s, %s = %s", categoryExpressionAttributeName, categoryExpressionAttributeValue, formatsExpressionAttributeName, formatsExpressionAttributeValue)
+			}
+		} else if len(formatsMap) > 0 {
+			updateInput.ExpressionAttributeNames = map[string]string{
+				formatsExpressionAttributeName: store.FormatsTableAttributeName,
+			}
+			updateInput.ExpressionAttributeValues = map[string]types.AttributeValue{
+				formatsExpressionAttributeValue: &types.AttributeValueMemberM{Value: formatsMap},
+			}
+			updateExpression = fmt.Sprintf("SET %s = %s", categoryExpressionAttributeName, categoryExpressionAttributeValue)
+		}
+	}
+
+	updateInput.UpdateExpression = aws.String(updateExpression)
+	return updateInput
 }

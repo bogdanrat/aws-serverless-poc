@@ -18,6 +18,7 @@ var (
 
 type Store interface {
 	GetAll() ([]*models.Book, error)
-	PutMany(books []*models.Book) error
+	PutMany([]*models.Book) error
 	Search(map[string]string) ([]*models.Book, error)
+	Update(*models.Book, bool) (*models.Book, error)
 }
