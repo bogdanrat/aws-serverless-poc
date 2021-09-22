@@ -57,7 +57,7 @@ Resources:
         Fn::GetAtt:
         - GetAllBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/63507f31bed6740bd9a77ef66da9b301
+      CodeUri: s3://aws-serverless-poc/deployments/54b61e9f0ff99d9c8121d8c45df6486a
       Environment:
         Variables:
           REGION:
@@ -133,7 +133,7 @@ Resources:
         Fn::GetAtt:
         - CreateBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/f6332cd19c8ba01bc859904df851b755
+      CodeUri: s3://aws-serverless-poc/deployments/ce51cf802f75309359ed4ab3d0198f52
       Environment:
         Variables:
           REGION:
@@ -209,7 +209,7 @@ Resources:
         Fn::GetAtt:
         - SearchBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/9e8ffa6680ac0b7f75b6e5adf85b70fb
+      CodeUri: s3://aws-serverless-poc/deployments/484ea4d35efda38b54060904c65b7c13
       Environment:
         Variables:
           REGION:
@@ -265,7 +265,7 @@ Resources:
             Action:
             - cloudwatch:PutMetricData
             Resource: '*'
-      - PolicyName: WriteDynamoDBTableItemsPolicy
+      - PolicyName: GetDynamoDBTableItemsPolicy
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -277,6 +277,88 @@ Resources:
             Resource:
             - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
             - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}/index/*
+  UpdateBookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: UpdateBook
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias:
+        Ref: LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role:
+        Fn::GetAtt:
+        - UpdateBookFunctionRole
+        - Arn
+      CodeUri: s3://aws-serverless-poc/deployments/07ed95128cadbabe2496bfe946e93eab
+      Environment:
+        Variables:
+          REGION:
+            Ref: AWS::Region
+          TABLE_NAME:
+            Ref: BooksTable
+      Events:
+        FullUpdateBookEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: put
+            RestApiId:
+              Ref: BooksAPI
+        PartialUpdateBookEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: patch
+            RestApiId:
+              Ref: BooksAPI
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  UpdateBookFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - sts:AssumeRole
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyName: CreateCloudWatchLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: CreateCloudWatchMetricsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+      - PolicyName: UpdateDynamoDBTableItemsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:UpdateItem
+            Resource:
+            - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
   BooksTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -362,14 +444,28 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
-            post:
+            put:
               x-amazon-apigateway-integration:
                 uri:
                   Fn::Sub:
                   - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations
                   - lambdaArn:
                       Fn::GetAtt:
-                      - CreateBooksFunction
+                      - UpdateBookFunction
+                      - Arn
+                    lambdaAlias:
+                      Ref: LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
+            patch:
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub:
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations
+                  - lambdaArn:
+                      Fn::GetAtt:
+                      - UpdateBookFunction
                       - Arn
                     lambdaAlias:
                       Ref: LambdaAlias
@@ -417,6 +513,15 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName:
         Ref: SearchBooksFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*
+  UpdateBookApiGatewayInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: UpdateBookFunction
       Principal: apigateway.amazonaws.com
       SourceArn:
         Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*

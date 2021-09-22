@@ -222,7 +222,7 @@ Resources:
       ReservedConcurrentExecutions: 10
       Timeout: 600
       MemorySize: 128
-  # Create books Lambda Function Role
+  # Search books Lambda Function Role
   SearchBooksFunctionRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -259,7 +259,7 @@ Resources:
                 Action:
                   - cloudwatch:PutMetricData
                 Resource: "*"
-        - PolicyName: "WriteDynamoDBTableItemsPolicy"
+        - PolicyName: "GetDynamoDBTableItemsPolicy"
           # Allow Lambda to Get items from the DynamoDB Table
           PolicyDocument:
             Version: "2012-10-17"
@@ -272,6 +272,87 @@ Resources:
                 Resource:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}/index/*'
+  # Update book Lambda Function
+  UpdateBookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: UpdateBook
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias: !Ref LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role: !GetAtt UpdateBookFunctionRole.Arn
+      CodeUri: ../functions/update-book/deployment.zip
+      Environment:
+        Variables:
+          REGION: !Ref "AWS::Region"
+          TABLE_NAME: !Ref BooksTable
+      Events:
+        FullUpdateBookEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: put
+            RestApiId:
+              Ref: BooksAPI
+        PartialUpdateBookEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: patch
+            RestApiId:
+              Ref: BooksAPI
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  # Update book Lambda Function Role
+  UpdateBookFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      # Allow Lambda to assume this role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "sts:AssumeRole"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: "CreateCloudWatchLogsPolicy"
+          # Allow Lambda to write to CloudWatch Logs & Metrics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: "CreateCloudWatchMetricsPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+        - PolicyName: "UpdateDynamoDBTableItemsPolicy"
+          # Allow Lambda to Update items from the DynamoDB Table
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:UpdateItem
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}'
   # DynamoDB Table
   BooksTable:
     Type: AWS::DynamoDB::Table
@@ -348,11 +429,20 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
-            post:
+            put:
               x-amazon-apigateway-integration:
                 uri: !Sub
                   - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations"
-                  - lambdaArn: !GetAtt CreateBooksFunction.Arn
+                  - lambdaArn: !GetAtt UpdateBookFunction.Arn
+                    lambdaAlias: !Ref LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
+            patch:
+              x-amazon-apigateway-integration:
+                uri: !Sub
+                  - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations"
+                  - lambdaArn: !GetAtt UpdateBookFunction.Arn
                     lambdaAlias: !Ref LambdaAlias
                 passthroughBehavior: when_no_match
                 httpMethod: POST
@@ -389,6 +479,13 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref SearchBooksFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*"
+  UpdateBookApiGatewayInvokePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref UpdateBookFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*"
 

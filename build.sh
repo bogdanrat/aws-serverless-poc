@@ -19,6 +19,10 @@ cd ../search-books && GOOS=linux GOARCH=amd64 go build -o main cmd/main.go || ex
 zip ${DEPLOYMENT_PACKAGE_NAME} main || exit
 rm main
 
+cd ../update-book && GOOS=linux GOARCH=amd64 go build -o main cmd/main.go || exit
+zip ${DEPLOYMENT_PACKAGE_NAME} main || exit
+rm main
+
 cd ../../sam || exit
 
 echo "Building & packaging SAM template..."
@@ -31,5 +35,6 @@ echo "Cleaning up..."
 rm ../functions/get-books/${DEPLOYMENT_PACKAGE_NAME}
 rm ../functions/create-books/${DEPLOYMENT_PACKAGE_NAME}
 rm ../functions/search-books/${DEPLOYMENT_PACKAGE_NAME}
+rm ../functions/update-book/${DEPLOYMENT_PACKAGE_NAME}
 
 echo "Done."

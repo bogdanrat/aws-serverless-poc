@@ -42,7 +42,7 @@ func (h *Handler) Handle(req *events.APIGatewayProxyRequest) (*events.APIGateway
 		return h.apiResponse(http.StatusBadRequest, []byte(fmt.Sprintf("invalid payload")))
 	}
 
-	updatedBook, err := h.Store.Update(nil, fullUpdate)
+	updatedBook, err := h.Store.Update(book, fullUpdate)
 	if err != nil {
 		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("error updating dynamodb item: %v", err)))
 	}
