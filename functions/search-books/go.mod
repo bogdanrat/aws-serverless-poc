@@ -1,4 +1,4 @@
-module github.com/bogdanrat/aws-serverless-poc/functions/get-books
+module github.com/bogdanrat/aws-serverless-poc/functions/search-books
 
 go 1.16
 

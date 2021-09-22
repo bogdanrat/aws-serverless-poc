@@ -27,6 +27,18 @@ Parameters:
     MaxLength: 20
     MinLength: 3
     ConstraintDescription: "2-10 Latin letters"
+  TableCategoryIndex:
+    Type: String
+    Default: CategoryIndex
+    Description: The DynamoDB Table Category Global Secondary Index Name
+    MaxLength: 20
+    MinLength: 3
+  TableTitleIndex:
+    Type: String
+    Default: TitleIndex
+    Description: The DynamoDB Table Title Global Secondary Index Name
+    MaxLength: 20
+    MinLength: 3
   BucketName:
     Type: String
     Default: aws-serverless-poc
@@ -181,6 +193,85 @@ Resources:
                   - dynamodb:BatchWriteItem
                   - dynamodb:PutItem
                 Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}'
+  # Search books Lambda Function
+  SearchBooksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SearchBooks
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias: !Ref LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role: !GetAtt SearchBooksFunctionRole.Arn
+      CodeUri: ../functions/search-books/deployment.zip
+      Environment:
+        Variables:
+          REGION: !Ref "AWS::Region"
+          TABLE_NAME: !Ref BooksTable
+          TABLE_CATEGORY_INDEX_NAME: !Ref TableCategoryIndex
+          TABLE_TITLE_INDEX_NAME: !Ref TableTitleIndex
+      Events:
+        SearchBooksEvent:
+          Type: Api
+          Properties:
+            Path: /search
+            Method: get
+            RestApiId:
+              Ref: BooksAPI
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  # Create books Lambda Function Role
+  SearchBooksFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      # Allow Lambda to assume this role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "sts:AssumeRole"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: "CreateCloudWatchLogsPolicy"
+          # Allow Lambda to write to CloudWatch Logs & Metrics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: "CreateCloudWatchMetricsPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+        - PolicyName: "WriteDynamoDBTableItemsPolicy"
+          # Allow Lambda to Get items from the DynamoDB Table
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Scan
+                  - dynamodb:Query
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}/index/*'
   # DynamoDB Table
   BooksTable:
     Type: AWS::DynamoDB::Table
@@ -199,13 +290,26 @@ Resources:
         - AttributeName: Title
           KeyType: RANGE
       ProvisionedThroughput:
-        ReadCapacityUnits: 2
-        WriteCapacityUnits: 2
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
       GlobalSecondaryIndexes:
-        - IndexName: "CategoryIndex"
+        - IndexName: !Ref TableCategoryIndex
           KeySchema:
             - AttributeName: Category
               KeyType: HASH
+            - AttributeName: Author
+              KeyType: RANGE
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+        - IndexName: !Ref TableTitleIndex
+          KeySchema:
+            - AttributeName: Title
+              KeyType: HASH
+            - AttributeName: Author
+              KeyType: RANGE
           Projection:
             ProjectionType: "ALL"
           ProvisionedThroughput:
@@ -253,6 +357,18 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
+          /search:
+            get:
+              produces:
+                - application/json
+              x-amazon-apigateway-integration:
+                uri: !Sub
+                  - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations"
+                  - lambdaArn: !GetAtt SearchBooksFunction.Arn
+                    lambdaAlias: !Ref LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
   # API Gateway Role to invoke Lambdas
   GetAllBooksLambdaApiGatewayInvokePermission:
     Type: "AWS::Lambda::Permission"
@@ -266,6 +382,13 @@ Resources:
     Properties:
       Action: lambda:InvokeFunction
       FunctionName: !Ref CreateBooksFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*"
+  SearchBooksApiGatewayInvokePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref SearchBooksFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*"
 
