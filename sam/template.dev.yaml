@@ -353,6 +353,70 @@ Resources:
                   - dynamodb:UpdateItem
                 Resource:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}'
+  # DynamoDB Streams processor Lambda Function
+  BooksStreamsProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: BooksStreamProcessor
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias: !Ref LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role: !GetAtt BooksStreamsProcessorFunctionRole.Arn
+      CodeUri: ../functions/stream-processor/deployment.zip
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  # DynamoDB Streams processor Lambda Function Role
+  BooksStreamsProcessorFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        # Allow Lambda to assume this role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "sts:AssumeRole"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: "CreateCloudWatchLogsPolicy"
+          # Allow Lambda to write to CloudWatch Logs & Metrics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: "CreateCloudWatchMetricsPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+        - PolicyName: "UpdateDynamoDBTableItemsPolicy"
+          # Allow Lambda to get streams from the DynamoDB Table
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeStream
+                  - dynamodb:GetRecords
+                  - dynamodb:GetShardIterator
+                  - dynamodb:ListStreams
+                Resource: !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}/stream/*'
   # DynamoDB Table
   BooksTable:
     Type: AWS::DynamoDB::Table
@@ -371,8 +435,10 @@ Resources:
         - AttributeName: Title
           KeyType: RANGE
       ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
       GlobalSecondaryIndexes:
         - IndexName: !Ref TableCategoryIndex
           KeySchema:
@@ -396,6 +462,15 @@ Resources:
           ProvisionedThroughput:
             ReadCapacityUnits: 1
             WriteCapacityUnits: 1
+  # Books DynamoDB Table Streams
+  BooksTableStream:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: True
+      EventSourceArn: !GetAtt BooksTable.StreamArn
+      StartingPosition: LATEST
+      FunctionName: !GetAtt BooksStreamsProcessorFunction.Arn
   # API Gateway
   BooksAPI:
     Type: 'AWS::Serverless::Api'
@@ -425,6 +500,15 @@ Resources:
                 uri: !Sub
                   - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations"
                   - lambdaArn: !GetAtt GetAllBooksFunction.Arn
+                    lambdaAlias: !Ref LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
+            post:
+              x-amazon-apigateway-integration:
+                uri: !Sub
+                  - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations"
+                  - lambdaArn: !GetAtt CreateBooksFunction.Arn
                     lambdaAlias: !Ref LambdaAlias
                 passthroughBehavior: when_no_match
                 httpMethod: POST

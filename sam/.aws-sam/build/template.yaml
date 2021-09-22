@@ -359,6 +359,70 @@ Resources:
             - dynamodb:UpdateItem
             Resource:
             - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
+  BooksStreamsProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: BooksStreamProcessor
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias:
+        Ref: LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role:
+        Fn::GetAtt:
+        - BooksStreamsProcessorFunctionRole
+        - Arn
+      CodeUri: ../../../functions/stream-processor/deployment.zip
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  BooksStreamsProcessorFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - sts:AssumeRole
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyName: CreateCloudWatchLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: CreateCloudWatchMetricsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+      - PolicyName: UpdateDynamoDBTableItemsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:DescribeStream
+            - dynamodb:GetRecords
+            - dynamodb:GetShardIterator
+            - dynamodb:ListStreams
+            Resource:
+              Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}/stream/*
   BooksTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -377,8 +441,10 @@ Resources:
       - AttributeName: Title
         KeyType: RANGE
       ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
       GlobalSecondaryIndexes:
       - IndexName:
           Ref: TableCategoryIndex
@@ -404,6 +470,20 @@ Resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+  BooksTableStream:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: true
+      EventSourceArn:
+        Fn::GetAtt:
+        - BooksTable
+        - StreamArn
+      StartingPosition: LATEST
+      FunctionName:
+        Fn::GetAtt:
+        - BooksStreamsProcessorFunction
+        - Arn
   BooksAPI:
     Type: AWS::Serverless::Api
     Properties:
@@ -438,6 +518,20 @@ Resources:
                   - lambdaArn:
                       Fn::GetAtt:
                       - GetAllBooksFunction
+                      - Arn
+                    lambdaAlias:
+                      Ref: LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
+            post:
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub:
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations
+                  - lambdaArn:
+                      Fn::GetAtt:
+                      - CreateBooksFunction
                       - Arn
                     lambdaAlias:
                       Ref: LambdaAlias

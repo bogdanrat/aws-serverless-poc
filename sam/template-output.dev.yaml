@@ -57,7 +57,7 @@ Resources:
         Fn::GetAtt:
         - GetAllBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/54b61e9f0ff99d9c8121d8c45df6486a
+      CodeUri: s3://aws-serverless-poc/deployments/c37d06f883f8a8162f17fcef51c86752
       Environment:
         Variables:
           REGION:
@@ -133,7 +133,7 @@ Resources:
         Fn::GetAtt:
         - CreateBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/ce51cf802f75309359ed4ab3d0198f52
+      CodeUri: s3://aws-serverless-poc/deployments/d9b5feff42aae62293754c4ee62d74e4
       Environment:
         Variables:
           REGION:
@@ -209,7 +209,7 @@ Resources:
         Fn::GetAtt:
         - SearchBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/484ea4d35efda38b54060904c65b7c13
+      CodeUri: s3://aws-serverless-poc/deployments/dac7573335914b6ed374e09c75785c32
       Environment:
         Variables:
           REGION:
@@ -291,7 +291,7 @@ Resources:
         Fn::GetAtt:
         - UpdateBookFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/07ed95128cadbabe2496bfe946e93eab
+      CodeUri: s3://aws-serverless-poc/deployments/e037d0d6fa723c38b5f72a83cf037bd8
       Environment:
         Variables:
           REGION:
@@ -359,6 +359,70 @@ Resources:
             - dynamodb:UpdateItem
             Resource:
             - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
+  BooksStreamsProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: BooksStreamProcessor
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias:
+        Ref: LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role:
+        Fn::GetAtt:
+        - BooksStreamsProcessorFunctionRole
+        - Arn
+      CodeUri: s3://aws-serverless-poc/deployments/f89cab45b8c48fca514beb7909c3398d
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  BooksStreamsProcessorFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - sts:AssumeRole
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyName: CreateCloudWatchLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: CreateCloudWatchMetricsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+      - PolicyName: UpdateDynamoDBTableItemsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:DescribeStream
+            - dynamodb:GetRecords
+            - dynamodb:GetShardIterator
+            - dynamodb:ListStreams
+            Resource:
+              Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}/stream/*
   BooksTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -377,8 +441,10 @@ Resources:
       - AttributeName: Title
         KeyType: RANGE
       ProvisionedThroughput:
-        ReadCapacityUnits: 5
-        WriteCapacityUnits: 5
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
       GlobalSecondaryIndexes:
       - IndexName:
           Ref: TableCategoryIndex
@@ -404,6 +470,20 @@ Resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+  BooksTableStream:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: true
+      EventSourceArn:
+        Fn::GetAtt:
+        - BooksTable
+        - StreamArn
+      StartingPosition: LATEST
+      FunctionName:
+        Fn::GetAtt:
+        - BooksStreamsProcessorFunction
+        - Arn
   BooksAPI:
     Type: AWS::Serverless::Api
     Properties:
@@ -438,6 +518,20 @@ Resources:
                   - lambdaArn:
                       Fn::GetAtt:
                       - GetAllBooksFunction
+                      - Arn
+                    lambdaAlias:
+                      Ref: LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
+            post:
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub:
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations
+                  - lambdaArn:
+                      Fn::GetAtt:
+                      - CreateBooksFunction
                       - Arn
                     lambdaAlias:
                       Ref: LambdaAlias
