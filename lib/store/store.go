@@ -1,12 +1,19 @@
 package store
 
-import "github.com/bogdanrat/aws-serverless-poc/contracts/models"
+import (
+	"errors"
+	"github.com/bogdanrat/aws-serverless-poc/contracts/models"
+)
 
 const (
 	TitleTableAttributeName    = "Title"
 	AuthorTableAttributeName   = "Author"
 	CategoryTableAttributeName = "Category"
 	FormatsTableAttributeName  = "Formats"
+)
+
+var (
+	EmptyQueryErr = errors.New("empty query")
 )
 
 type Store interface {
