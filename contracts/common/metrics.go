@@ -5,4 +5,5 @@ const (
 	EnvironmentDimensionName = "Environment"
 	InsertedBooksMetricName  = "InsertedBooks"
 	FetchedBooksMetricName   = "FetchedBooks"
+	UpdatedBooksMetricName   = "UpdatedBooks"
 )
