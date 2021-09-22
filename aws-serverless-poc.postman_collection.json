@@ -73,6 +73,52 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "full update book",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"my book\",\n    \"author\": \"Bogdan Rat\",\n    \"category\": \"comedy\",\n    \"formats\": {\n        \"Papaperback\": \"newid\"\n    }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{aws-serverless-poc-api-url}}",
+					"host": [
+						"{{aws-serverless-poc-api-url}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "partial update book",
+			"request": {
+				"method": "PATCH",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"title\": \"my book\",\n    \"author\": \"Bogdan Rat\",\n    \"category\": \"drama\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{aws-serverless-poc-api-url}}",
+					"host": [
+						"{{aws-serverless-poc-api-url}}"
+					]
+				}
+			},
+			"response": []
 		}
 	]
 }
