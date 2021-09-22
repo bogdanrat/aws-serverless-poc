@@ -199,7 +199,7 @@ func (s *DynamoStore) Update(book *models.Book, partial bool) (*models.Book, err
 	return updatedBook, nil
 }
 
-func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) *dynamodb.UpdateItemInput {
+func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) (*dynamodb.UpdateItemInput, error) {
 	formatsMap := make(map[string]types.AttributeValue)
 	for formatKey, formatValue := range book.Formats {
 		formatsMap[formatKey] = &types.AttributeValueMemberS{Value: formatValue}
@@ -217,19 +217,26 @@ func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) *dyna
 	var updateExpression string
 	// full update
 	if !partial {
+		// update formats no matter what, even with blank values
 		updateInput.ExpressionAttributeNames = map[string]string{
-			categoryExpressionAttributeName: store.CategoryTableAttributeName,
 			formatsExpressionAttributeName:  store.FormatsTableAttributeName,
 		}
-
 		updateInput.ExpressionAttributeValues = map[string]types.AttributeValue{
-			categoryExpressionAttributeValue: &types.AttributeValueMemberS{Value: book.Category},
 			formatsExpressionAttributeValue:  &types.AttributeValueMemberM{Value: formatsMap},
 		}
 
-		updateExpression = fmt.Sprintf("SET %s = %s, %s = %s", categoryExpressionAttributeName, categoryExpressionAttributeValue, formatsExpressionAttributeName, formatsExpressionAttributeValue)
+		updateExpression = fmt.Sprintf("SET %s = %s", formatsExpressionAttributeName, formatsExpressionAttributeValue)
+
+		// The AttributeValue for a key attribute (Category GSI) cannot contain an empty string value
+		// only update category if value was provided
+		if book.Category != "" {
+			updateInput.ExpressionAttributeNames[categoryExpressionAttributeName] = store.CategoryTableAttributeName
+			updateInput.ExpressionAttributeValues[categoryExpressionAttributeValue] = &types.AttributeValueMemberS{Value: book.Category}
+			updateExpression = fmt.Sprintf("%s, %s = %s", updateExpression, categoryExpressionAttributeName, categoryExpressionAttributeValue)
+		}
 	} else {
 		// partial update
+		// only update category if value was provided
 		if book.Category != "" {
 			updateInput.ExpressionAttributeNames = map[string]string{
 				categoryExpressionAttributeName: store.CategoryTableAttributeName,
@@ -239,6 +246,7 @@ func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) *dyna
 			}
 			updateExpression = fmt.Sprintf("SET %s = %s", categoryExpressionAttributeName, categoryExpressionAttributeValue)
 
+			// only update formats if value was provided
 			if len(formatsMap) > 0 {
 				updateInput.ExpressionAttributeNames[formatsExpressionAttributeName] = store.FormatsTableAttributeName
 				updateInput.ExpressionAttributeValues[formatsExpressionAttributeValue] = &types.AttributeValueMemberM{Value: formatsMap}
@@ -251,10 +259,10 @@ func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) *dyna
 			updateInput.ExpressionAttributeValues = map[string]types.AttributeValue{
 				formatsExpressionAttributeValue: &types.AttributeValueMemberM{Value: formatsMap},
 			}
-			updateExpression = fmt.Sprintf("SET %s = %s", categoryExpressionAttributeName, categoryExpressionAttributeValue)
+			updateExpression = fmt.Sprintf("SET %s = %s", formatsExpressionAttributeName, formatsExpressionAttributeValue)
 		}
 	}
 
 	updateInput.UpdateExpression = aws.String(updateExpression)
-	return updateInput
+	return updateInput, nil
 }
