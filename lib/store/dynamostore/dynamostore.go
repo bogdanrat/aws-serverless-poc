@@ -131,7 +131,9 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 
 			if title != "" {
 				queryInput.FilterExpression = aws.String(fmt.Sprintf("#t = :title"))
-				queryInput.ExpressionAttributeNames["#t"] = store.TitleTableAttributeName
+				queryInput.ExpressionAttributeNames = map[string]string{
+					"#t": store.TitleTableAttributeName,
+				}
 				queryInput.ExpressionAttributeValues[":title"] = &types.AttributeValueMemberS{Value: title}
 			}
 		} else if title != "" {
@@ -143,6 +145,7 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 			}
 		}
 	} else {
+		// query by author (and by title) and filter by category
 		keyConditionExpression = fmt.Sprintf(`%s = :author`, store.AuthorTableAttributeName)
 		queryInput.ExpressionAttributeValues = map[string]types.AttributeValue{
 			":author": &types.AttributeValueMemberS{Value: author},
@@ -151,6 +154,12 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 		if title != "" {
 			keyConditionExpression = fmt.Sprintf("%s AND %s = :title", keyConditionExpression, store.TitleTableAttributeName)
 			queryInput.ExpressionAttributeValues[":title"] = &types.AttributeValueMemberS{Value: title}
+		} else if category != "" {
+			queryInput.FilterExpression = aws.String(fmt.Sprintf("#c = :category"))
+			queryInput.ExpressionAttributeNames = map[string]string{
+				"#c": store.CategoryTableAttributeName,
+			}
+			queryInput.ExpressionAttributeValues[":category"] = &types.AttributeValueMemberS{Value: category}
 		}
 	}
 
