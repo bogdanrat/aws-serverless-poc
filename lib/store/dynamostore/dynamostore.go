@@ -109,8 +109,6 @@ func (s *DynamoStore) Search(queryParams map[string]string) ([]*models.Book, err
 func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamodb.QueryInput, error) {
 	queryInput := &dynamodb.QueryInput{
 		TableName:                 aws.String(s.TableName),
-		ExpressionAttributeValues: map[string]types.AttributeValue{},
-		ExpressionAttributeNames:  map[string]string{},
 	}
 
 	category := queryParams[strings.ToLower(store.CategoryTableAttributeName)]
