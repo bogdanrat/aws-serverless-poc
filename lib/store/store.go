@@ -12,4 +12,5 @@ const (
 type Store interface {
 	GetAll() ([]*models.Book, error)
 	PutMany(books []*models.Book) error
+	Search(map[string]string) ([]*models.Book, error)
 }
