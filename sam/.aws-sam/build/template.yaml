@@ -42,6 +42,15 @@ Parameters:
     Type: String
     Default: aws-serverless-poc
     Description: The S3 Bucket for deployments
+  ContactEmailAddress:
+    Type: String
+    Description: Email address for operational notifications
+Conditions:
+  ContactEmailSet:
+    Fn::Not:
+    - Fn::Equals:
+      - ''
+      - Ref: ContactEmailAddress
 Resources:
   GetAllBooksFunction:
     Type: AWS::Serverless::Function
@@ -374,6 +383,10 @@ Resources:
         - BooksStreamsProcessorFunctionRole
         - Arn
       CodeUri: ../../../functions/stream-processor/deployment.zip
+      Environment:
+        Variables:
+          BOOKS_TOPIC_ARN:
+            Ref: BooksTopic
       ReservedConcurrentExecutions: 10
       Timeout: 600
       MemorySize: 128
@@ -423,6 +436,15 @@ Resources:
             - dynamodb:ListStreams
             Resource:
               Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}/stream/*
+      - PolicyName: PublishBooksSNSTopicPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - sns:publish
+            Resource:
+              Ref: BooksTopic
   BooksTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -619,6 +641,19 @@ Resources:
       Principal: apigateway.amazonaws.com
       SourceArn:
         Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*
+  BooksTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: BooksStatusTopic
+  AlarmNotifyOpsSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: ContactEmailSet
+    Properties:
+      Endpoint:
+        Ref: ContactEmailAddress
+      Protocol: email
+      TopicArn:
+        Ref: BooksTopic
 Outputs:
   Api:
     Description: API Gateway endpoint URL

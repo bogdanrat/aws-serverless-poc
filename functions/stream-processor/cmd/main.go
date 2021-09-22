@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/common"
 	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/handler"
+	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/publisher/snspublisher"
+	"os"
 )
 
 var (
@@ -14,6 +19,12 @@ func main() {
 }
 
 func init() {
+	// AWS Config
+	cfg, _ := config.LoadDefaultConfig(context.TODO(), config.WithRegion(os.Getenv(common.RegionEnvironmentVariable)))
+
+	// SNS
+	publisher := snspublisher.New(cfg)
+
 	// Handler
-	h = handler.New()
+	h = handler.New(publisher)
 }

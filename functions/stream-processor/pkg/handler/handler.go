@@ -2,16 +2,22 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/common"
+	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/publisher"
 	"github.com/bogdanrat/aws-serverless-poc/lib/store"
 	"log"
 )
 
-type Handler struct{}
+type Handler struct {
+	Publisher publisher.Publisher
+}
 
-func New() *Handler {
-	return &Handler{}
+func New(publisher publisher.Publisher) *Handler {
+	return &Handler{
+		Publisher: publisher,
+	}
 }
 
 func (h *Handler) Handle(ctx context.Context, event events.DynamoDBEvent) {
@@ -31,7 +37,12 @@ func (h *Handler) handleInsertStreamRecord(record events.DynamoDBStreamRecord) {
 	author := getBookAuthor(record)
 	title := getBookTitle(record)
 
-	log.Printf("New book published: %s - %s\n", author, title)
+	message := fmt.Sprintf("New book published: %s - %s\n", author, title)
+	log.Println(message)
+
+	if err := h.Publisher.Publish(message); err != nil {
+		log.Printf("Error publishing message to SNS: %s", err)
+	}
 }
 
 func (h *Handler) handleModifyStreamRecord(record events.DynamoDBStreamRecord) {
@@ -58,7 +69,12 @@ func (h *Handler) handleRemoveStreamRecord(record events.DynamoDBStreamRecord) {
 	author := getBookAuthor(record)
 	title := getBookTitle(record)
 
-	log.Printf("Book went out of stock: %s - %s\n", author, title)
+	message := fmt.Sprintf("Book went out of stock: %s - %s\n", author, title)
+	log.Println(message)
+
+	if err := h.Publisher.Publish(message); err != nil {
+		log.Printf("Error publishing message to SNS: %s", err)
+	}
 }
 
 func getFormatsAvailability(record events.DynamoDBStreamRecord) (map[string]bool, map[string]bool) {
