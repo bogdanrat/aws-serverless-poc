@@ -183,7 +183,10 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 }
 
 func (s *DynamoStore) Update(book *models.Book, partial bool) (*models.Book, error) {
-	updateInput := s.generateUpdateInput(book, partial)
+	updateInput, err := s.generateUpdateInput(book, partial)
+	if err != nil {
+		return nil, err
+	}
 
 	output, err := s.Client.UpdateItem(context.Background(), updateInput)
 	if err != nil {
@@ -219,10 +222,10 @@ func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) (*dyn
 	if !partial {
 		// update formats no matter what, even with blank values
 		updateInput.ExpressionAttributeNames = map[string]string{
-			formatsExpressionAttributeName:  store.FormatsTableAttributeName,
+			formatsExpressionAttributeName: store.FormatsTableAttributeName,
 		}
 		updateInput.ExpressionAttributeValues = map[string]types.AttributeValue{
-			formatsExpressionAttributeValue:  &types.AttributeValueMemberM{Value: formatsMap},
+			formatsExpressionAttributeValue: &types.AttributeValueMemberM{Value: formatsMap},
 		}
 
 		updateExpression = fmt.Sprintf("SET %s = %s", formatsExpressionAttributeName, formatsExpressionAttributeValue)
