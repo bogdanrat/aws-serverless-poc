@@ -11,7 +11,6 @@ import (
 	"github.com/bogdanrat/aws-serverless-poc/contracts/common"
 	"github.com/bogdanrat/aws-serverless-poc/contracts/models"
 	"github.com/bogdanrat/aws-serverless-poc/lib/store"
-	"log"
 	"os"
 	"strings"
 )
@@ -88,6 +87,10 @@ func (s *DynamoStore) PutMany(books []*models.Book) error {
 func (s *DynamoStore) Search(queryParams map[string]string) ([]*models.Book, error) {
 	queryInput, err := s.generateQueryInput(queryParams)
 	if err != nil {
+		// if no search params were provided, return all books
+		if errors.Is(err, store.EmptyQueryErr) {
+			return s.GetAll()
+		}
 		return nil, err
 	}
 
@@ -152,14 +155,9 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 	}
 
 	if keyConditionExpression == "" {
-		return nil, errors.New("invalid query params")
+		return nil, store.EmptyQueryErr
 	}
 
 	queryInput.KeyConditionExpression = aws.String(keyConditionExpression)
-
-	log.Printf("keyConditionExpression: %s\n", keyConditionExpression)
-	log.Printf("ExpressionAttributeNames: %v\n", queryInput.ExpressionAttributeNames)
-	log.Printf("ExpressionAttributeValues: %v\n", queryInput.ExpressionAttributeValues)
-
 	return queryInput, nil
 }
