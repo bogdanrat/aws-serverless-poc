@@ -124,19 +124,26 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 		if category != "" {
 			queryInput.IndexName = aws.String(s.CategoryIndexName)
 			keyConditionExpression = fmt.Sprintf("%s = :category", store.CategoryTableAttributeName)
+			queryInput.ExpressionAttributeValues[":category"] = &types.AttributeValueMemberS{Value: category}
 
 			if title != "" {
 				queryInput.FilterExpression = aws.String(fmt.Sprintf("#t = :title"))
+				queryInput.ExpressionAttributeNames["#t"] = store.TitleTableAttributeName
+				queryInput.ExpressionAttributeValues[":title"] = &types.AttributeValueMemberS{Value: title}
 			}
 		} else if title != "" {
 			// query by title
 			queryInput.IndexName = aws.String(s.TitleIndexName)
 			keyConditionExpression = fmt.Sprintf("%s = :title", store.TitleTableAttributeName)
+			queryInput.ExpressionAttributeValues[":title"] = &types.AttributeValueMemberS{Value: title}
 		}
 	} else {
 		keyConditionExpression = fmt.Sprintf(`%s = :author`, store.AuthorTableAttributeName)
+		queryInput.ExpressionAttributeValues[":author"] = &types.AttributeValueMemberS{Value: author}
+
 		if title != "" {
 			keyConditionExpression = fmt.Sprintf("%s AND %s = :title", keyConditionExpression, store.TitleTableAttributeName)
+			queryInput.ExpressionAttributeValues[":title"] = &types.AttributeValueMemberS{Value: title}
 		}
 	}
 
@@ -145,12 +152,6 @@ func (s *DynamoStore) generateQueryInput(queryParams map[string]string) (*dynamo
 	}
 
 	queryInput.KeyConditionExpression = aws.String(keyConditionExpression)
-
-	queryInput.ExpressionAttributeValues[":category"] = &types.AttributeValueMemberS{Value: category}
-	queryInput.ExpressionAttributeValues[":author"] = &types.AttributeValueMemberS{Value: author}
-	queryInput.ExpressionAttributeValues[":title"] = &types.AttributeValueMemberS{Value: title}
-
-	queryInput.ExpressionAttributeNames["#t"] = store.TitleTableAttributeName
 
 	log.Printf("keyConditionExpression: %s\n", keyConditionExpression)
 	log.Printf("ExpressionAttributeNames: %v\n", queryInput.ExpressionAttributeNames)
