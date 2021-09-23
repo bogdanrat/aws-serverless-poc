@@ -66,7 +66,7 @@ Resources:
         Fn::GetAtt:
         - GetAllBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/e2c8fbdb8c77ff3e670c429e41694505
+      CodeUri: s3://aws-serverless-poc/deployments/70b093fe082e6beacc6a80f8de15b070
       Environment:
         Variables:
           REGION:
@@ -142,7 +142,7 @@ Resources:
         Fn::GetAtt:
         - CreateBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/ec044ff16c620ab741b8396a86a963fe
+      CodeUri: s3://aws-serverless-poc/deployments/78317060c5b57867663c87277e5c8e19
       Environment:
         Variables:
           REGION:
@@ -218,7 +218,7 @@ Resources:
         Fn::GetAtt:
         - SearchBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/d9f11f0d200502df91124ee7e7654d45
+      CodeUri: s3://aws-serverless-poc/deployments/c5923e3694c5e2b6ddb557f167391cc5
       Environment:
         Variables:
           REGION:
@@ -300,7 +300,7 @@ Resources:
         Fn::GetAtt:
         - UpdateBookFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/69a94485dd3d303a7ffc266a4a347483
+      CodeUri: s3://aws-serverless-poc/deployments/db772ed5e50e7dcf3ebb13f6d8edf29a
       Environment:
         Variables:
           REGION:
@@ -368,6 +368,82 @@ Resources:
             - dynamodb:UpdateItem
             Resource:
             - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
+  DeleteBooksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DeleteBooks
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias:
+        Ref: LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role:
+        Fn::GetAtt:
+        - DeleteBooksFunctionRole
+        - Arn
+      CodeUri: s3://aws-serverless-poc/deployments/d26ce04e4e813b5afae25a4231d4a7a4
+      Environment:
+        Variables:
+          REGION:
+            Ref: AWS::Region
+          TABLE_NAME:
+            Ref: BooksTable
+      Events:
+        DeleteBooksEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: delete
+            RestApiId:
+              Ref: BooksAPI
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  DeleteBooksFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - sts:AssumeRole
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyName: CreateCloudWatchLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: CreateCloudWatchMetricsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+      - PolicyName: DeleteDynamoDBTableItemsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:BatchWriteItem
+            - dynamodb:DeleteItem
+            Resource:
+            - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
   BooksStreamsProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -382,7 +458,7 @@ Resources:
         Fn::GetAtt:
         - BooksStreamsProcessorFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/42b9039016ccc4a90631aced04e6d9cf
+      CodeUri: s3://aws-serverless-poc/deployments/af0115e76ead87b5619a7a494a2516ba
       Environment:
         Variables:
           BOOKS_TOPIC_ARN:
@@ -588,6 +664,20 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
+            delete:
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub:
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations
+                  - lambdaArn:
+                      Fn::GetAtt:
+                      - DeleteBooksFunction
+                      - Arn
+                    lambdaAlias:
+                      Ref: LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
           /search:
             get:
               produces:
@@ -638,6 +728,15 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName:
         Ref: UpdateBookFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*
+  DeleteBooksApiGatewayInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: DeleteBooksFunction
       Principal: apigateway.amazonaws.com
       SourceArn:
         Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*

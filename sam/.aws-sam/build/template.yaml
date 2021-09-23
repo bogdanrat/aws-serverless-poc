@@ -368,6 +368,82 @@ Resources:
             - dynamodb:UpdateItem
             Resource:
             - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
+  DeleteBooksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DeleteBooks
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias:
+        Ref: LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role:
+        Fn::GetAtt:
+        - DeleteBooksFunctionRole
+        - Arn
+      CodeUri: ../../../functions/delete-books/deployment.zip
+      Environment:
+        Variables:
+          REGION:
+            Ref: AWS::Region
+          TABLE_NAME:
+            Ref: BooksTable
+      Events:
+        DeleteBooksEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: delete
+            RestApiId:
+              Ref: BooksAPI
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  DeleteBooksFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - sts:AssumeRole
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+      Policies:
+      - PolicyName: CreateCloudWatchLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: '*'
+      - PolicyName: CreateCloudWatchMetricsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - cloudwatch:PutMetricData
+            Resource: '*'
+      - PolicyName: DeleteDynamoDBTableItemsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - dynamodb:BatchWriteItem
+            - dynamodb:DeleteItem
+            Resource:
+            - Fn::Sub: arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}
   BooksStreamsProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -588,6 +664,20 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
+            delete:
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub:
+                  - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations
+                  - lambdaArn:
+                      Fn::GetAtt:
+                      - DeleteBooksFunction
+                      - Arn
+                    lambdaAlias:
+                      Ref: LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
           /search:
             get:
               produces:
@@ -638,6 +728,15 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName:
         Ref: UpdateBookFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*
+  DeleteBooksApiGatewayInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: DeleteBooksFunction
       Principal: apigateway.amazonaws.com
       SourceArn:
         Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*

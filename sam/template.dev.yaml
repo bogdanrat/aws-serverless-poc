@@ -45,7 +45,7 @@ Parameters:
     Description: The S3 Bucket for deployments
   ContactEmailAddress:
     Type: String
-    Description: Email address for operational notifications
+    Description: Email address for books notifications
 
 Conditions:
   ContactEmailSet: !Not [ !Equals [ '', !Ref ContactEmailAddress ] ]
@@ -360,6 +360,81 @@ Resources:
                   - dynamodb:UpdateItem
                 Resource:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}'
+  # Delete books Lambda Function
+  DeleteBooksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: DeleteBooks
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias: !Ref LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role: !GetAtt DeleteBooksFunctionRole.Arn
+      CodeUri: ../functions/delete-books/deployment.zip
+      Environment:
+        Variables:
+          REGION: !Ref "AWS::Region"
+          TABLE_NAME: !Ref BooksTable
+      Events:
+        DeleteBooksEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: delete
+            RestApiId:
+              Ref: BooksAPI
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  # Delete books Lambda Function Role
+  DeleteBooksFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      # Allow Lambda to assume this role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "sts:AssumeRole"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: "CreateCloudWatchLogsPolicy"
+          # Allow Lambda to write to CloudWatch Logs & Metrics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: "CreateCloudWatchMetricsPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: "*"
+        - PolicyName: "DeleteDynamoDBTableItemsPolicy"
+          # Allow Lambda to Delete items from the DynamoDB Table
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:DeleteItem
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${BooksTable}'
   # DynamoDB Streams processor Lambda Function
   BooksStreamsProcessorFunction:
     Type: AWS::Serverless::Function
@@ -550,6 +625,15 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
+            delete:
+              x-amazon-apigateway-integration:
+                uri: !Sub
+                  - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations"
+                  - lambdaArn: !GetAtt DeleteBooksFunction.Arn
+                    lambdaAlias: !Ref LambdaAlias
+                passthroughBehavior: when_no_match
+                httpMethod: POST
+                type: aws_proxy
           /search:
             get:
               produces:
@@ -591,12 +675,19 @@ Resources:
       FunctionName: !Ref UpdateBookFunction
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*"
+  DeleteBooksApiGatewayInvokePermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DeleteBooksFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${BooksAPI}/*/*/*"
   # SNS Topic
   BooksTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: BooksStatusTopic
-  AlarmNotifyOpsSubscription:
+  BooksTopicSubscription:
     Type: AWS::SNS::Subscription
     Condition: ContactEmailSet
     Properties:
