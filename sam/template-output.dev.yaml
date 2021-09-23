@@ -2,6 +2,14 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: SAM Template for Serverless Books API
 Parameters:
+  APIName:
+    Type: String
+    Default: BooksAPI
+    Description: The API Gateway name
+    AllowedPattern: ^[A-Za-z]+$
+    MaxLength: 20
+    MinLength: 2
+    ConstraintDescription: 2-20 Latin letters
   StageName:
     Type: String
     Default: dev
@@ -66,7 +74,7 @@ Resources:
         Fn::GetAtt:
         - GetAllBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/957c34bdd4e41132427e058adfd6046e
+      CodeUri: s3://aws-serverless-poc/deployments/94eb7706e6835d57f3fca529363bf58a
       Environment:
         Variables:
           REGION:
@@ -142,7 +150,7 @@ Resources:
         Fn::GetAtt:
         - CreateBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/c7bc6fab08a6faab260566a760d29869
+      CodeUri: s3://aws-serverless-poc/deployments/40d38240f9e392125fa1b21146b8f00b
       Environment:
         Variables:
           REGION:
@@ -218,7 +226,7 @@ Resources:
         Fn::GetAtt:
         - SearchBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/c7c007ec27af4e6316a18e44a7260117
+      CodeUri: s3://aws-serverless-poc/deployments/650b23b634608fec150d60372858c158
       Environment:
         Variables:
           REGION:
@@ -300,7 +308,7 @@ Resources:
         Fn::GetAtt:
         - UpdateBookFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/0e789842975497be16c0088840c39ee0
+      CodeUri: s3://aws-serverless-poc/deployments/6b2d22916a48ecd7d3c1ca2eb2d43c88
       Environment:
         Variables:
           REGION:
@@ -382,7 +390,7 @@ Resources:
         Fn::GetAtt:
         - DeleteBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/bb25954b556433f6eee759c089ddcc61
+      CodeUri: s3://aws-serverless-poc/deployments/faf189ae301efc37d61730a6c3decb11
       Environment:
         Variables:
           REGION:
@@ -458,7 +466,7 @@ Resources:
         Fn::GetAtt:
         - BooksStreamsProcessorFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/a4af969d7106d9378c627a33cc43e71b
+      CodeUri: s3://aws-serverless-poc/deployments/f861b3a63221c9f7a1d208aa8a8d2cf8
       Environment:
         Variables:
           BOOKS_TOPIC_ARN:
@@ -585,7 +593,8 @@ Resources:
   BooksAPI:
     Type: AWS::Serverless::Api
     Properties:
-      Name: BooksAPI
+      Name:
+        Ref: APIName
       StageName:
         Ref: StageName
       Variables:
@@ -594,11 +603,17 @@ Resources:
       Cors:
         AllowMethods: '''*'''
         AllowOrigin: '''*'''
-      MethodSettings:
-      - ResourcePath: /*
-        HttpMethod: '*'
-        ThrottlingBurstLimit: 2
-        ThrottlingRateLimit: 1
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          Description: Usage plan for Books API
+          Quota:
+            Limit: 10
+            Period: MONTH
+          Throttle:
+            BurstLimit: 2
+            RateLimit: 1
       DefinitionBody:
         swagger: 2.0
         info:
@@ -754,10 +769,14 @@ Resources:
       TopicArn:
         Ref: BooksTopic
 Outputs:
-  Api:
+  APIURL:
     Description: API Gateway endpoint URL
     Value:
       Fn::Sub: https://${BooksAPI}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+  APIName:
+    Description: API Gateway Name
+    Value:
+      Ref: APIName
   Table:
     Description: DynamoDB Table
     Value:

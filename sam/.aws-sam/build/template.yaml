@@ -2,6 +2,14 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: SAM Template for Serverless Books API
 Parameters:
+  APIName:
+    Type: String
+    Default: BooksAPI
+    Description: The API Gateway name
+    AllowedPattern: ^[A-Za-z]+$
+    MaxLength: 20
+    MinLength: 2
+    ConstraintDescription: 2-20 Latin letters
   StageName:
     Type: String
     Default: dev
@@ -585,7 +593,8 @@ Resources:
   BooksAPI:
     Type: AWS::Serverless::Api
     Properties:
-      Name: BooksAPI
+      Name:
+        Ref: APIName
       StageName:
         Ref: StageName
       Variables:
@@ -594,11 +603,17 @@ Resources:
       Cors:
         AllowMethods: '''*'''
         AllowOrigin: '''*'''
-      MethodSettings:
-      - ResourcePath: /*
-        HttpMethod: '*'
-        ThrottlingBurstLimit: 2
-        ThrottlingRateLimit: 1
+      Auth:
+        ApiKeyRequired: true
+        UsagePlan:
+          CreateUsagePlan: PER_API
+          Description: Usage plan for Books API
+          Quota:
+            Limit: 10
+            Period: MONTH
+          Throttle:
+            BurstLimit: 2
+            RateLimit: 1
       DefinitionBody:
         swagger: 2.0
         info:
@@ -754,10 +769,14 @@ Resources:
       TopicArn:
         Ref: BooksTopic
 Outputs:
-  Api:
+  APIURL:
     Description: API Gateway endpoint URL
     Value:
       Fn::Sub: https://${BooksAPI}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+  APIName:
+    Description: API Gateway Name
+    Value:
+      Ref: APIName
   Table:
     Description: DynamoDB Table
     Value:

@@ -40,6 +40,14 @@ sam package --s3-bucket ${DEPLOYMENT_BUCKET_NAME} --s3-prefix ${DEPLOYMENT_PREFI
 echo "Deploying SAM template..."
 sam deploy --template-file ./template-output.dev.yaml --stack-name ${SAM_STACK_NAME} --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND --region ${DEPLOYMENT_REGION} --s3-bucket ${DEPLOYMENT_BUCKET_NAME} --parameter-overrides ContactEmailAddress=bogdanalexandru.rat@gmail.com || exit
 
+apiName="$(aws cloudformation describe-stacks --stack-name ${SAM_STACK_NAME} --query "Stacks[0].Outputs[?OutputKey=='APIName'].OutputValue" --output text)"
+# the AWS::ApiGateway::ApiKey resource created by the PER_API instruction has a logical ID of <api-logical-id>ApiKey
+apiKeyId="$(aws cloudformation describe-stack-resources --stack-name ${SAM_STACK_NAME} --logical-resource-id "${apiName}"ApiKey --query 'StackResources[0].PhysicalResourceId' --output text)"
+# take the api key based on its physical resource id
+apiKey="$(aws apigateway get-api-key --api-key "${apiKeyId}" --include-value)"
+
+echo "API Key details: " "$apiKey"
+
 echo "Cleaning up..."
 rm ../functions/get-books/${DEPLOYMENT_PACKAGE_NAME}
 rm ../functions/create-books/${DEPLOYMENT_PACKAGE_NAME}
