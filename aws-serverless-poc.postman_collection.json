@@ -119,6 +119,29 @@
 				}
 			},
 			"response": []
+		},
+		{
+			"name": "delete books",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"New Title-x\"\n    },\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"Second New Title-x\"\n    }\n]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{aws-serverless-poc-api-url}}",
+					"host": [
+						"{{aws-serverless-poc-api-url}}"
+					]
+				}
+			},
+			"response": []
 		}
 	]
 }
