@@ -270,25 +270,26 @@ func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) (*dyn
 	return updateInput, nil
 }
 
-func (s *DynamoStore) DeleteMany(books []*models.Book) error {
-	input := &dynamodb.BatchWriteItemInput{
-		RequestItems: make(map[string][]types.WriteRequest),
+func (s *DynamoStore) DeleteMany(books []*models.Book, requestToken string) error {
+	transactInput := &dynamodb.TransactWriteItemsInput{
+		TransactItems: make([]types.TransactWriteItem, 0),
+		// If the original TransactWriteItems call was successful,
+		// the subsequent TransactWriteItems calls with the same client token return successfully without making any changes.
+		ClientRequestToken: aws.String(requestToken),
 	}
-
 	for _, book := range books {
-		writeRequest := types.WriteRequest{
-			DeleteRequest: &types.DeleteRequest{
+		transactInput.TransactItems = append(transactInput.TransactItems, types.TransactWriteItem{
+			Delete: &types.Delete{
+				TableName: aws.String(s.TableName),
 				Key: map[string]types.AttributeValue{
 					store.AuthorTableAttributeName: &types.AttributeValueMemberS{Value: book.Author},
 					store.TitleTableAttributeName:  &types.AttributeValueMemberS{Value: book.Title},
 				},
 			},
-		}
-
-		input.RequestItems[s.TableName] = append(input.RequestItems[s.TableName], writeRequest)
+		})
 	}
 
-	_, err := s.Client.BatchWriteItem(context.TODO(), input)
+	_, err := s.Client.TransactWriteItems(context.TODO(), transactInput)
 	if err != nil {
 		return err
 	}
