@@ -20,4 +20,5 @@ var (
 	InvalidPayloadErr   = errors.New("invalid payload")
 	DynamoDBActionErr   = errors.New("dynamodb error")
 	CWLogsErr           = errors.New("could not log request")
+	MarshalBooksErr     = errors.New("error marshalling books")
 )
