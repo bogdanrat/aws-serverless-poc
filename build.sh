@@ -42,7 +42,7 @@ sam deploy --template-file ./template-output.dev.yaml --stack-name ${SAM_STACK_N
 
 apiName="$(aws cloudformation describe-stacks --stack-name ${SAM_STACK_NAME} --query "Stacks[0].Outputs[?OutputKey=='APIName'].OutputValue" --output text)"
 # the AWS::ApiGateway::ApiKey resource created by the PER_API instruction has a logical ID of <api-logical-id>ApiKey
-apiKeyId="$(aws cloudformation describe-stack-resources --stack-name ${SAM_STACK_NAME} --logical-resource-id "${apiName}"ApiKey --query 'StackResources[0].PhysicalResourceId' --output text)"
+apiKeyId="$(aws cloudformation describe-stack-resources --stack-name ${SAM_STACK_NAME} --logical-resource-id "${apiName}"ApiKey --query "StackResources[0].PhysicalResourceId" --output text)"
 # take the api key based on its physical resource id
 apiKey="$(aws apigateway get-api-key --api-key "${apiKeyId}" --include-value)"
 
