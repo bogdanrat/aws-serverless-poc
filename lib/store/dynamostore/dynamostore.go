@@ -269,3 +269,29 @@ func (s *DynamoStore) generateUpdateInput(book *models.Book, partial bool) (*dyn
 	updateInput.UpdateExpression = aws.String(updateExpression)
 	return updateInput, nil
 }
+
+func (s *DynamoStore) DeleteMany(books []*models.Book) error {
+	input := &dynamodb.BatchWriteItemInput{
+		RequestItems: make(map[string][]types.WriteRequest),
+	}
+
+	for _, book := range books {
+		writeRequest := types.WriteRequest{
+			DeleteRequest: &types.DeleteRequest{
+				Key: map[string]types.AttributeValue{
+					store.AuthorTableAttributeName: &types.AttributeValueMemberS{Value: book.Author},
+					store.TitleTableAttributeName:  &types.AttributeValueMemberS{Value: book.Title},
+				},
+			},
+		}
+
+		input.RequestItems[s.TableName] = append(input.RequestItems[s.TableName], writeRequest)
+	}
+
+	_, err := s.Client.BatchWriteItem(context.TODO(), input)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
