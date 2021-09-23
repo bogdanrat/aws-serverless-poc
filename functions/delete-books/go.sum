@@ -38,6 +38,8 @@ github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923053600-1576f14d
 github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923053600-1576f14d8c98/go.mod h1:B32no3BByEJG/BjvF3/jV9LtZTHE0y0G635sm87WzJk=
 github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923053745-4160b4cf8cbf h1:jNv3mIIE58/YrIQrmOP6RxKbmT4upZBRDQiuyzh9pUg=
 github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923053745-4160b4cf8cbf/go.mod h1:B32no3BByEJG/BjvF3/jV9LtZTHE0y0G635sm87WzJk=
+github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923062143-89ee573e8d77 h1:YShUJWCVdBX/y4ysbFzc2BMdobnj3Nn9WaSo+LjMtek=
+github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923062143-89ee573e8d77/go.mod h1:B32no3BByEJG/BjvF3/jV9LtZTHE0y0G635sm87WzJk=
 github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210922200537-c05e7033e77a h1:uy8Pn8VEksAEvZaIe3Y/xiVqkhGLdxPNqALfBUFlqVQ=
 github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210922200537-c05e7033e77a/go.mod h1:+hO0620IIlA1xEw1U1fr5t4cJmp7p1KSoXsVUyQ3wJ0=
 github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210923060832-c91ce1d03aa3 h1:9haq8worQVVqmRdwjaYya2kNbBl7H5BS3X+ConuHbks=

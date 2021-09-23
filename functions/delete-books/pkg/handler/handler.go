@@ -39,7 +39,7 @@ func (h *Handler) Handle(req *events.APIGatewayProxyRequest) (*events.APIGateway
 		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("error deleting from dynamodb: %v", err)))
 	}
 
-	if err := h.logRequest(req, common.InsertedBooksMetricName); err != nil {
+	if err := h.logRequest(req, common.DeletedBooksMetricName); err != nil {
 		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("could not log request: %s", err)))
 	}
 
