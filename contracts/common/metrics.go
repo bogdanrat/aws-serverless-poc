@@ -6,4 +6,5 @@ const (
 	InsertedBooksMetricName  = "InsertedBooks"
 	FetchedBooksMetricName   = "FetchedBooks"
 	UpdatedBooksMetricName   = "UpdatedBooks"
+	DeletedBooksMetricName   = "DeletedBooks"
 )
