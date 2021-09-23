@@ -36,6 +36,8 @@ github.com/aws/smithy-go v1.8.0/go.mod h1:SObp3lf9smib00L/v3U2eAKG8FyQ7iLrJnQiAm
 github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210922093644-26315d0edfde/go.mod h1:B32no3BByEJG/BjvF3/jV9LtZTHE0y0G635sm87WzJk=
 github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210922163511-dec238c9c75e h1:iCl8k/qJvHyzOPHSjJGKYk+5TMLYPKhXL2izEAE3EE8=
 github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210922163511-dec238c9c75e/go.mod h1:B32no3BByEJG/BjvF3/jV9LtZTHE0y0G635sm87WzJk=
+github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923070025-dbfc30d64ada h1:xt+WAIaFulKrs8oeNQS1wnF1EWyTsO4xxXiaBmHk1rI=
+github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923070025-dbfc30d64ada/go.mod h1:B32no3BByEJG/BjvF3/jV9LtZTHE0y0G635sm87WzJk=
 github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210922162940-baa288827a59 h1:dfFjSK18AgHxyRqivc+VeatBqbovVayYUvGPSqTfbnc=
 github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210922162940-baa288827a59/go.mod h1:+hO0620IIlA1xEw1U1fr5t4cJmp7p1KSoXsVUyQ3wJ0=
 github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210922171027-1794bdb39fa3 h1:Z40g5InUxwoLZo6qAlS9iP6IKUwtXVcnS3V1inCiKu0=

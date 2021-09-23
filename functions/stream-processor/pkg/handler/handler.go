@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/common"
+	"github.com/bogdanrat/aws-serverless-poc/contracts/common"
 	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/publisher"
 	"github.com/bogdanrat/aws-serverless-poc/lib/store"
 	"log"
@@ -41,7 +41,7 @@ func (h *Handler) handleInsertStreamRecord(record events.DynamoDBStreamRecord) {
 	log.Println(message)
 
 	if err := h.Publisher.Publish(message); err != nil {
-		log.Printf("Error publishing message to SNS: %s", err)
+		log.Printf("%s: %s", common.SNSPublishErr.Error(), err)
 	}
 }
 
@@ -73,7 +73,7 @@ func (h *Handler) handleRemoveStreamRecord(record events.DynamoDBStreamRecord) {
 	log.Println(message)
 
 	if err := h.Publisher.Publish(message); err != nil {
-		log.Printf("Error publishing message to SNS: %s", err)
+		log.Printf("%s: %s", common.SNSPublishErr, err)
 	}
 }
 

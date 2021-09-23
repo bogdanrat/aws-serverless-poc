@@ -7,5 +7,6 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.9.1
 	github.com/aws/aws-sdk-go-v2/config v1.8.2
 	github.com/aws/aws-sdk-go-v2/service/sns v1.8.1
+	github.com/bogdanrat/aws-serverless-poc/contracts v0.0.0-20210923070025-dbfc30d64ada // indirect
 	github.com/bogdanrat/aws-serverless-poc/lib v0.0.0-20210922171551-91d46f4ebd20
 )

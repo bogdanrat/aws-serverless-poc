@@ -26,21 +26,21 @@ func New(store store.Store, logger logger.MetricLogger) *Handler {
 
 func (h *Handler) Handle(req *events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	if !strings.EqualFold(req.HTTPMethod, common.HttpDeleteMethod) {
-		return h.apiResponse(http.StatusMethodNotAllowed, []byte("method not allowed"))
+		return h.apiResponse(http.StatusMethodNotAllowed, []byte(common.MethodNotAllowedErr.Error()))
 	}
 
 	books := make([]*models.Book, 0)
 	err := json.Unmarshal([]byte(req.Body), &books)
 	if err != nil {
-		return h.apiResponse(http.StatusBadRequest, []byte(fmt.Sprintf("invalid payload")))
+		return h.apiResponse(http.StatusBadRequest, []byte(common.InvalidPayloadErr.Error()))
 	}
 
-	if err := h.Store.DeleteMany(books); err != nil {
-		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("error deleting from dynamodb: %v", err)))
+	if err := h.Store.DeleteMany(books, req.RequestContext.RequestID); err != nil {
+		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("%s: %v", common.DynamoDBActionErr, err)))
 	}
 
 	if err := h.logRequest(req, common.DeletedBooksMetricName); err != nil {
-		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("could not log request: %s", err)))
+		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("%s: %s", common.CWLogsErr, err)))
 	}
 
 	return h.apiResponse(http.StatusOK, nil)
@@ -50,7 +50,7 @@ func (h *Handler) apiResponse(statusCode int, body []byte) (*events.APIGatewayPr
 	response := &events.APIGatewayProxyResponse{
 		StatusCode: statusCode,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
+			common.ContentTypeHeader: common.ContentTypeApplicationJSON,
 		},
 	}
 	if body != nil {

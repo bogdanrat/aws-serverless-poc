@@ -49,14 +49,14 @@ func (s *DynamoStore) GetAll() ([]*models.Book, error) {
 
 	output, err := s.Client.Scan(context.Background(), scanInput)
 	if err != nil {
-		return nil, fmt.Errorf("error scanning dynamodb table: %v", err)
+		return nil, fmt.Errorf("%s: %v", common.DynamoDBActionErr, err)
 	}
 
 	books := make([]*models.Book, 0)
 
 	err = attributevalue.UnmarshalListOfMaps(output.Items, &books)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshaling dynamodb items: %v", err)
+		return nil, fmt.Errorf("%s: %v", common.DynamoDBUnmarshalErr, err)
 	}
 
 	return books, nil
@@ -107,14 +107,14 @@ func (s *DynamoStore) Search(queryParams map[string]string) ([]*models.Book, err
 
 	output, err := s.Client.Query(context.Background(), queryInput)
 	if err != nil {
-		return nil, fmt.Errorf("error querying dynamodb table: %v", err)
+		return nil, fmt.Errorf("%s: %v", common.DynamoDBActionErr, err)
 	}
 
 	books := make([]*models.Book, 0)
 
 	err = attributevalue.UnmarshalListOfMaps(output.Items, &books)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshaling dynamodb items: %v", err)
+		return nil, fmt.Errorf("%s: %v", common.DynamoDBUnmarshalErr, err)
 	}
 
 	return books, nil
@@ -196,7 +196,7 @@ func (s *DynamoStore) Update(book *models.Book, partial bool) (*models.Book, err
 	updatedBook := &models.Book{}
 	err = attributevalue.UnmarshalMap(output.Attributes, &updatedBook)
 	if err != nil {
-		return nil, fmt.Errorf("error unmarshaling dynamodb attributes map: %v", err)
+		return nil, fmt.Errorf("%s: %v", common.DynamoDBActionErr, err)
 	}
 
 	return updatedBook, nil

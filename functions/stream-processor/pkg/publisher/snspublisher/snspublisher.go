@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
-	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/common"
+	"github.com/bogdanrat/aws-serverless-poc/contracts/common"
 	"github.com/bogdanrat/aws-serverless-poc/functions/stream-processor/pkg/publisher"
 	"os"
 )

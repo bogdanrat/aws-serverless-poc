@@ -30,11 +30,11 @@ func (h *Handler) Handle(req *events.APIGatewayProxyRequest) (*events.APIGateway
 
 	response, err := json.Marshal(books)
 	if err != nil {
-		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("error marshalling books: %v", err)))
+		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("%s: %v", common.MarshalBooksErr, err)))
 	}
 
 	if err := h.logRequest(req, common.FetchedBooksMetricName); err != nil {
-		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("could not log request: %s", err)))
+		return h.apiResponse(http.StatusInternalServerError, []byte(fmt.Sprintf("%s: %s", common.CWLogsErr, err)))
 	}
 
 	return h.apiResponse(http.StatusOK, response)
@@ -44,7 +44,7 @@ func (h *Handler) apiResponse(statusCode int, body []byte) (*events.APIGatewayPr
 	response := &events.APIGatewayProxyResponse{
 		StatusCode: statusCode,
 		Headers: map[string]string{
-			"Content-Type": "application/json",
+			common.ContentTypeHeader: common.ContentTypeApplicationJSON,
 		},
 	}
 	if body != nil {

@@ -44,7 +44,7 @@ Parameters:
     Description: The S3 Bucket for deployments
   ContactEmailAddress:
     Type: String
-    Description: Email address for operational notifications
+    Description: Email address for books notifications
 Conditions:
   ContactEmailSet:
     Fn::Not:
@@ -66,7 +66,7 @@ Resources:
         Fn::GetAtt:
         - GetAllBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/70b093fe082e6beacc6a80f8de15b070
+      CodeUri: s3://aws-serverless-poc/deployments/957c34bdd4e41132427e058adfd6046e
       Environment:
         Variables:
           REGION:
@@ -142,7 +142,7 @@ Resources:
         Fn::GetAtt:
         - CreateBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/78317060c5b57867663c87277e5c8e19
+      CodeUri: s3://aws-serverless-poc/deployments/c7bc6fab08a6faab260566a760d29869
       Environment:
         Variables:
           REGION:
@@ -218,7 +218,7 @@ Resources:
         Fn::GetAtt:
         - SearchBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/c5923e3694c5e2b6ddb557f167391cc5
+      CodeUri: s3://aws-serverless-poc/deployments/c7c007ec27af4e6316a18e44a7260117
       Environment:
         Variables:
           REGION:
@@ -300,7 +300,7 @@ Resources:
         Fn::GetAtt:
         - UpdateBookFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/db772ed5e50e7dcf3ebb13f6d8edf29a
+      CodeUri: s3://aws-serverless-poc/deployments/0e789842975497be16c0088840c39ee0
       Environment:
         Variables:
           REGION:
@@ -382,7 +382,7 @@ Resources:
         Fn::GetAtt:
         - DeleteBooksFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/d26ce04e4e813b5afae25a4231d4a7a4
+      CodeUri: s3://aws-serverless-poc/deployments/bb25954b556433f6eee759c089ddcc61
       Environment:
         Variables:
           REGION:
@@ -458,7 +458,7 @@ Resources:
         Fn::GetAtt:
         - BooksStreamsProcessorFunctionRole
         - Arn
-      CodeUri: s3://aws-serverless-poc/deployments/af0115e76ead87b5619a7a494a2516ba
+      CodeUri: s3://aws-serverless-poc/deployments/a4af969d7106d9378c627a33cc43e71b
       Environment:
         Variables:
           BOOKS_TOPIC_ARN:
@@ -744,7 +744,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: BooksStatusTopic
-  AlarmNotifyOpsSubscription:
+  BooksTopicSubscription:
     Type: AWS::SNS::Subscription
     Condition: ContactEmailSet
     Properties:

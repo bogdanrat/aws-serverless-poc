@@ -44,7 +44,7 @@ Parameters:
     Description: The S3 Bucket for deployments
   ContactEmailAddress:
     Type: String
-    Description: Email address for operational notifications
+    Description: Email address for books notifications
 Conditions:
   ContactEmailSet:
     Fn::Not:
@@ -744,7 +744,7 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: BooksStatusTopic
-  AlarmNotifyOpsSubscription:
+  BooksTopicSubscription:
     Type: AWS::SNS::Subscription
     Condition: ContactEmailSet
     Properties:
