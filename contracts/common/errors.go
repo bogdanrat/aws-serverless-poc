@@ -10,4 +10,5 @@ var (
 	CWLogsErr            = errors.New("could not log request")
 	MarshalBooksErr      = errors.New("error marshalling books")
 	SNSPublishErr        = errors.New("publish sns error")
+	PathNotFoundErr      = errors.New("path not found")
 )
