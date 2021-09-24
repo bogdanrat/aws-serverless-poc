@@ -3,10 +3,12 @@ package common
 import "errors"
 
 const (
-	AUTH_PARAMETER_USERNAME = "USERNAME"
-	AUTH_PARAMETER_PASSWORD = "PASSWORD"
-	SignUpSuccessFul        = "Sign up successful. Please check your email for verification link."
-	ConfirmEmail            = "Please confirm your email fist."
+	AUTH_PARAMETER_USERNAME       = "USERNAME"
+	AUTH_PARAMETER_PASSWORD       = "PASSWORD"
+	SignUpSuccessFul              = "sign up successful"
+	CheckEmailForVerificationLink = "please check your email for verification link"
+	EmailNotConfirmed             = "email not confirmed"
+	WrongPassword                 = "wrong password"
 )
 
 var (
