@@ -79,8 +79,8 @@ Resources:
         GetBooksEvent:
           Type: Api
           Properties:
-            Path: /
-            Method: get
+            Path: /books
+            Method: GET
             RestApiId:
               Ref: BooksAPI
       ReservedConcurrentExecutions: 10
@@ -154,8 +154,8 @@ Resources:
         CreateBooksEvent:
           Type: Api
           Properties:
-            Path: /
-            Method: post
+            Path: /books
+            Method: POST
             RestApiId:
               Ref: BooksAPI
       ReservedConcurrentExecutions: 10
@@ -230,8 +230,8 @@ Resources:
         SearchBooksEvent:
           Type: Api
           Properties:
-            Path: /search
-            Method: get
+            Path: /books/search
+            Method: GET
             RestApiId:
               Ref: BooksAPI
       ReservedConcurrentExecutions: 10
@@ -307,15 +307,15 @@ Resources:
         FullUpdateBookEvent:
           Type: Api
           Properties:
-            Path: /
-            Method: put
+            Path: /books
+            Method: PUT
             RestApiId:
               Ref: BooksAPI
         PartialUpdateBookEvent:
           Type: Api
           Properties:
-            Path: /
-            Method: patch
+            Path: /books
+            Method: PATCH
             RestApiId:
               Ref: BooksAPI
       ReservedConcurrentExecutions: 10
@@ -388,8 +388,8 @@ Resources:
         DeleteBooksEvent:
           Type: Api
           Properties:
-            Path: /
-            Method: delete
+            Path: /books
+            Method: DELETE
             RestApiId:
               Ref: BooksAPI
       ReservedConcurrentExecutions: 10
@@ -519,6 +519,85 @@ Resources:
                 Action:
                   - sns:publish
                 Resource: !Ref BooksTopic
+  # Auth Lambda Function
+  AuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: BooksAPIAuth
+      Handler: main
+      Runtime: go1.x
+      AutoPublishAlias: !Ref LambdaAlias
+      DeploymentPreference:
+        Type: AllAtOnce
+      Role: !GetAtt AuthFunctionRole.Arn
+      CodeUri: ../functions/auth/deployment.zip
+      Environment:
+        Variables:
+          REGION: !Ref "AWS::Region"
+          COGNITO_USER_POOL_ID: !Ref BooksAPIUserPool
+          COGNITO_APP_CLIENT_ID: !Ref UserPoolAppClient
+      Events:
+        SignUpEvent:
+          Type: Api
+          Properties:
+            Path: /signup
+            Method: POST
+            RestApiId:
+              Ref: BooksAPI
+            Auth:
+              Authorizer: NONE
+        LogInEvent:
+          Type: Api
+          Properties:
+            Path: /login
+            Method: POST
+            RestApiId:
+              Ref: BooksAPI
+            Auth:
+              Authorizer: NONE
+      ReservedConcurrentExecutions: 10
+      Timeout: 600
+      MemorySize: 128
+  # Auth Lambda Function Role
+  AuthFunctionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      Path: "/"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+        # Allow Lambda to assume this role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "sts:AssumeRole"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: "CreateCloudWatchLogsPolicy"
+          # Allow Lambda to write to CloudWatch Logs & Metrics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: "CognitoUserPoolPolicy"
+          # Allow Lambda to make actions on Cognito User Pools
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cognito-idp:SignUp
+                  - cognito-idp:InitiateAuth
+                Resource: "*"
+
   # DynamoDB Table
   BooksTable:
     Type: AWS::DynamoDB::Table
@@ -584,23 +663,29 @@ Resources:
       Cors:
         AllowMethods: "'*'"
         AllowOrigin: "'*'"
+        AllowHeaders: "'*'"
       Auth:
         ApiKeyRequired: true
         UsagePlan:
           CreateUsagePlan: PER_API
           Description: Usage plan for Books API
           Quota:
-            Limit: 10
+            Limit: 100
             Period: MONTH
           Throttle:
             BurstLimit: 2
             RateLimit: 1
+        DefaultAuthorizer: CognitoAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt BooksAPIUserPool.Arn
       DefinitionBody:
         swagger: 2.0
         info:
           title: !Sub BooksAPI-${StageName}
         paths:
-          /:
+          /books:
             get:
               produces:
                 - application/json
@@ -648,7 +733,7 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
-          /search:
+          /books/search:
             get:
               produces:
                 - application/json
@@ -660,6 +745,60 @@ Resources:
                 passthroughBehavior: when_no_match
                 httpMethod: POST
                 type: aws_proxy
+  BooksAPIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - SignUpMethod
+      - LoginMethod
+    Properties:
+      RestApiId: !Ref BooksAPI
+  SignUpResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref BooksAPI
+      ParentId: !GetAtt
+        - BooksAPI
+        - RootResourceId
+      PathPart: signup
+  SignUpMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BooksAPI
+      ResourceId: !Ref SignUpResource
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations"
+          - lambdaArn: !GetAtt AuthFunction.Arn
+            lambdaAlias: !Ref LambdaAlias
+  LoginResource:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      RestApiId: !Ref BooksAPI
+      ParentId: !GetAtt
+        - BooksAPI
+        - RootResourceId
+      PathPart: login
+  LoginMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref BooksAPI
+      ResourceId: !Ref LoginResource
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub
+          - "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}:${lambdaAlias}/invocations"
+          - lambdaArn: !GetAtt AuthFunction.Arn
+            lambdaAlias: !Ref LambdaAlias
+
   # API Gateway Role to invoke Lambdas
   GetAllBooksLambdaApiGatewayInvokePermission:
     Type: "AWS::Lambda::Permission"
@@ -709,6 +848,44 @@ Resources:
       Endpoint: !Ref ContactEmailAddress
       Protocol: email
       TopicArn: !Ref BooksTopic
+
+  # Cognito User Pool
+  BooksAPIUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      UserPoolName: BooksAPIUserPool
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_LINK
+        EmailSubject: Verify your email id for ${BooksAPI}
+        EmailMessage: Please click the link below to verify your email address. {####}
+  # Cognito App Client
+  UserPoolAppClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref BooksAPIUserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+  # Cognito User Pool Domain
+  # must be unique across the AWS Region; required for sending email verification links
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref BooksAPIUserPool
+      Domain: !Sub
+        - "${AWS::AccountId}-${stage}-domain"
+        - stage: !Ref StageName
+
 Outputs:
   APIURL:
     Description: "API Gateway endpoint URL"

@@ -43,9 +43,7 @@ func (h *Handler) Handle(req *events.APIGatewayProxyRequest) (*events.APIGateway
 func (h *Handler) apiResponse(statusCode int, body []byte) (*events.APIGatewayProxyResponse, error) {
 	response := &events.APIGatewayProxyResponse{
 		StatusCode: statusCode,
-		Headers: map[string]string{
-			common.ContentTypeHeader: common.ContentTypeApplicationJSON,
-		},
+		Headers:    common.GetCorsHeaders(),
 	}
 	if body != nil {
 		response.Body = string(body)
