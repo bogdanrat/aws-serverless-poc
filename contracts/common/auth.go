@@ -7,6 +7,7 @@ const (
 	AUTH_PARAMETER_PASSWORD       = "PASSWORD"
 	EmailNotFound                 = "email not found"
 	EmailNotConfirmed             = "email not confirmed"
+	EmailAlreadyRegistered        = "email already registered"
 	SignUpSuccessFul              = "sign up successful"
 	CheckEmailForVerificationLink = "please check your email for verification link"
 	WrongPassword                 = "wrong password"
