@@ -5,9 +5,10 @@ import "errors"
 const (
 	AUTH_PARAMETER_USERNAME       = "USERNAME"
 	AUTH_PARAMETER_PASSWORD       = "PASSWORD"
+	EmailNotFound                 = "email not found"
+	EmailNotConfirmed             = "email not confirmed"
 	SignUpSuccessFul              = "sign up successful"
 	CheckEmailForVerificationLink = "please check your email for verification link"
-	EmailNotConfirmed             = "email not confirmed"
 	WrongPassword                 = "wrong password"
 )
 
