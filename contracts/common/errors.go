@@ -11,4 +11,5 @@ var (
 	MarshalBooksErr      = errors.New("error marshalling books")
 	SNSPublishErr        = errors.New("publish sns error")
 	PathNotFoundErr      = errors.New("path not found")
+	TokenMarshalErr      = errors.New("error marshalling token")
 )
