@@ -9,11 +9,25 @@
 			"name": "all books",
 			"request": {
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{aws-serverless-api-key}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "{{aws-serverless-api-token}}",
+						"type": "text"
+					}
+				],
 				"url": {
-					"raw": "{{aws-serverless-poc-api-url}}",
+					"raw": "{{aws-serverless-poc-api-url}}/books",
 					"host": [
 						"{{aws-serverless-poc-api-url}}"
+					],
+					"path": [
+						"books"
 					]
 				}
 			},
@@ -23,13 +37,25 @@
 			"name": "search books",
 			"request": {
 				"method": "GET",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{aws-serverless-api-key}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "{{aws-serverless-api-token}}",
+						"type": "text"
+					}
+				],
 				"url": {
-					"raw": "{{aws-serverless-poc-api-url}}/search?author=Bogdan&category=drama",
+					"raw": "{{aws-serverless-poc-api-url}}/books/search?author=Bogdan&category=drama",
 					"host": [
 						"{{aws-serverless-poc-api-url}}"
 					],
 					"path": [
+						"books",
 						"search"
 					],
 					"query": [
@@ -55,10 +81,21 @@
 			"name": "create books",
 			"request": {
 				"method": "POST",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{aws-serverless-api-key}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "{{aws-serverless-api-token}}",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "raw",
-					"raw": "[\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"New Title\",\n        \"Category\": \"thriller\",\n        \"Formats\": {\n            \"Hardcover\": \"123-456\"\n        }\n    },\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"Second New Title\",\n        \"Category\": \"drama\",\n        \"Formats\": {\n            \"Paperback\": \"123-456-789\"\n        }\n    }\n]",
+					"raw": "[\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"New Title\",\n        \"Category\": \"thriller\",\n        \"Formats\": {\n            \"Hardcover\": \"123-456\"\n        }\n    },\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"New Title 2\",\n        \"Category\": \"drama\",\n        \"Formats\": {\n            \"Paperback\": \"123-456-789\"\n        }\n    }\n]",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -66,9 +103,12 @@
 					}
 				},
 				"url": {
-					"raw": "{{aws-serverless-poc-api-url}}",
+					"raw": "{{aws-serverless-poc-api-url}}/books",
 					"host": [
 						"{{aws-serverless-poc-api-url}}"
+					],
+					"path": [
+						"books"
 					]
 				}
 			},
@@ -78,10 +118,21 @@
 			"name": "full update book",
 			"request": {
 				"method": "PUT",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{aws-serverless-api-key}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "{{aws-serverless-api-token}}",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"title\": \"my book\",\n    \"author\": \"Bogdan Rat\",\n    \"category\": \"comedy\",\n    \"formats\": {\n        \"Papaperback\": \"newid\"\n    }\n}",
+					"raw": "{\n        \"Author\": \"Bogdan\",\n        \"Title\": \"New Title-z\",\n        \"Category\": \"thriller\",\n        \"Formats\": {\n            \"Hardcover\": \"123-456\",\n            \"Paperback\": \"777\"\n        }\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -89,9 +140,12 @@
 					}
 				},
 				"url": {
-					"raw": "{{aws-serverless-poc-api-url}}",
+					"raw": "{{aws-serverless-poc-api-url}}/books",
 					"host": [
 						"{{aws-serverless-poc-api-url}}"
+					],
+					"path": [
+						"books"
 					]
 				}
 			},
@@ -101,10 +155,21 @@
 			"name": "partial update book",
 			"request": {
 				"method": "PATCH",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{aws-serverless-api-key}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "{{aws-serverless-api-token}}",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"title\": \"my book\",\n    \"author\": \"Bogdan Rat\",\n    \"category\": \"drama\"\n}",
+					"raw": "\n{\n        \"Author\": \"Bogdan\",\n        \"Title\": \"New Title\",\n        \"Formats\": {\n            \"Hardcover\": \"123-456\",\n            \"Paperback\": \"777\",\n            \"Audiobook\": \"222\"\n        }\n}\n   ",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -112,9 +177,12 @@
 					}
 				},
 				"url": {
-					"raw": "{{aws-serverless-poc-api-url}}",
+					"raw": "{{aws-serverless-poc-api-url}}/books",
 					"host": [
 						"{{aws-serverless-poc-api-url}}"
+					],
+					"path": [
+						"books"
 					]
 				}
 			},
@@ -124,10 +192,21 @@
 			"name": "delete books",
 			"request": {
 				"method": "DELETE",
-				"header": [],
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{aws-serverless-api-key}}",
+						"type": "text"
+					},
+					{
+						"key": "Authorization",
+						"value": "{{aws-serverless-api-token}}",
+						"type": "text"
+					}
+				],
 				"body": {
 					"mode": "raw",
-					"raw": "[\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"New Title-x\"\n    },\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"Second New Title-x\"\n    }\n]",
+					"raw": "[\n    {\n        \"Author\": \"Bogdan\",\n        \"Title\": \"New Title-z\",\n        \"Category\": \"thriller\",\n        \"Formats\": {\n            \"Hardcover\": \"123-456\"\n        }\n    }\n]",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -135,9 +214,64 @@
 					}
 				},
 				"url": {
-					"raw": "{{aws-serverless-poc-api-url}}",
+					"raw": "{{aws-serverless-poc-api-url}}/books",
 					"host": [
 						"{{aws-serverless-poc-api-url}}"
+					],
+					"path": [
+						"books"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "signup",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"bogdanalexandru.rat@gmail.com\",\n    \"password\": \"password\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{aws-serverless-poc-api-url}}/signup",
+					"host": [
+						"{{aws-serverless-poc-api-url}}"
+					],
+					"path": [
+						"signup"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"bogdanalexandru.rat@gmail.com\",\n    \"password\": \"password\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{aws-serverless-poc-api-url}}/login",
+					"host": [
+						"{{aws-serverless-poc-api-url}}"
+					],
+					"path": [
+						"login"
 					]
 				}
 			},
