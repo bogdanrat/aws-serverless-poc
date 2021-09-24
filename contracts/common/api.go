@@ -6,6 +6,8 @@ const (
 	HttpPutMethod    = "put"
 	HttpPatchMethod  = "patch"
 	HttpDeleteMethod = "delete"
+	SignUpPath       = "/signup"
+	LogInPath        = "/login"
 )
 
 const (
