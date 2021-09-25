@@ -8,8 +8,8 @@
   - a new book has been published
   - a book went out of stock
   - new formats (hardcover, paperback, audiobook etc.) are available for a book
-- **Amazon SNS**: implements a Pub/Sub pattern for book status changes
+- **Amazon SNS**: implements a Pub/Sub pattern for book status changes. The email subscription is automatically created through the SAM template by the stack creation responsible (configurable through parameters).
 - **Amazon Cognito**: provides authentication and authorization mechanisms
 - **Amazon CloudWatch**: monitoring custom metric data sent by the Lambda functions
 
-![Architecture](https://files.fm/thumb_show.php?i=gxm326py9)
+![Architecture](https://files.fm/thumb_show.php?i=4dmggejqu)
