@@ -12,4 +12,4 @@
 - **Amazon Cognito**: provides authentication and authorization mechanisms
 - **Amazon CloudWatch**: monitoring custom metric data sent by the Lambda functions
 
-![Architecture](https://files.fm/thumb_show.php?i=4dmggejqu)
+![Architecture](https://bogdans-public-assets.s3.eu-central-1.amazonaws.com/AWS%20API%20POC.png)
